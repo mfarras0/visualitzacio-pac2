@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atur i inflació Espanya</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+  button { font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--grid); background: var(--surface-2); color: var(--text-primary); cursor: pointer; }
+  button:hover { border-color: var(--series-1); }
+</style>
+</head>
+<body>
+<main>
+  <nav><a href="index.html">Inici</a><a href="histograma.html">Histograma</a><a href="gauge.html">Gauge</a><a href="connected-scatterplot.html" aria-current="page">Connected scatterplot</a></nav>
+  <h1>Tres dècades d'atur i inflació a Espanya: dues crisis d'atur i un xoc de preus</h1>
+  <p class="subtitle">Cada punt és un any; la línia els uneix en ordre cronològic i les fletxes indiquen el sentit del temps. Cap a la dreta vol dir més atur; cap amunt, més inflació. Els punts s'enfosqueixen amb el pas del temps.</p>
+  <div class="controls"><button id="play" type="button">▶ Reprodueix el recorregut</button></div>
+  <div class="chart" id="chart"><div class="tooltip" id="tip"></div></div>
+  <p class="source"><b>Objectiu:</b> descobrir com han evolucionat <i>conjuntament</i> atur i inflació, i si es compleix la relació inversa de la corba de Phillips (només a trams: es compleix el 2008–2009 i el 2015–2017, però entre 2009 i 2011 pugen totes dues, entre 2013 i 2015 baixen totes dues, i el 2022 la inflació es dispara per la crisi energètica). <b>Audiència:</b> estudiants i lectors de premsa econòmica.</p>
+  <p class="source">Font: <a href="https://data.worldbank.org/country/spain">Banc Mundial</a> · Taxa d'atur, estimació OIT (SL.UEM.TOTL.ZS) i inflació, preus al consum (FP.CPI.TOTL.ZG), Espanya 1991–2025. Visualització: D3.js.</p>
+  <details>
+    <summary>Veure les dades en taula</summary>
+    <div class="table-wrap"><table id="table"><thead><tr><th>Any</th><th>Atur (%)</th><th>Inflació (%)</th></tr></thead><tbody></tbody></table></div>
+  </details>
+</main>
+<script>
+const num = v => v.toFixed(1).replace(".", ",");
+const W = 880, H = 560, m = { top: 24, right: 24, bottom: 48, left: 48 };
+const svg = d3.select("#chart").append("svg").attr("viewBox", [0, 0, W, H]);
+const tip = d3.select("#tip");
+
+// Years worth naming on the chart; the rest live in the tooltip and table.
+const labels = {
+  1991: ["1991", 8, -10], 1994: ["1994 · pic de la crisi dels 90", 8, -14, "end"], 2007: ["2007 · mínim d'atur", -10, 18, "end"],
+  2009: ["2009 · esclata la crisi", 10, 16], 2013: ["2013 · màxim d'atur (26 %)", -10, -12, "end"],
+  2020: ["2020 · covid", 10, 16], 2022: ["2022 · xoc de preus (8,4 %)", 10, -8], 2025: ["2025", -10, 16, "end"],
+};
+
+d3.json("data/atur_inflacio_esp.json").then(data => {
+  const x = d3.scaleLinear().domain([6, 28]).range([m.left, W - m.right]);
+  const y = d3.scaleLinear().domain([-1, 9]).range([H - m.bottom, m.top]);
+  const shade = d3.scaleLinear().domain(d3.extent(data, d => d.any)).range(["#86b6ef", "#104281"]);
+
+  svg.append("g").attr("class", "grid").attr("transform", `translate(0,${H - m.bottom})`)
+    .call(d3.axisBottom(x).ticks(11).tickSize(-(H - m.top - m.bottom)).tickFormat(""));
+  svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+    .call(d3.axisLeft(y).ticks(10).tickSize(-(W - m.left - m.right)).tickFormat(""));
+  svg.append("line").attr("x1", m.left).attr("x2", W - m.right).attr("y1", y(0)).attr("y2", y(0))
+    .attr("stroke", "var(--text-muted)").attr("stroke-width", 1);
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
+    .call(d3.axisBottom(x).ticks(11).tickFormat(d => d + "%").tickSizeOuter(0));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+    .call(d3.axisLeft(y).ticks(10).tickFormat(d => d + "%").tickSize(0)).call(g => g.select(".domain").remove());
+  svg.append("text").attr("class", "axis-label").attr("x", W - m.right).attr("y", H - 8).attr("text-anchor", "end").text("Taxa d'atur →");
+  svg.append("text").attr("class", "axis-label").attr("x", m.left + 6).attr("y", m.top + 12).text("↑ Inflació anual (IPC)");
+
+  const line = d3.line().x(d => x(d.atur)).y(d => y(d.inflacio));
+  const path = svg.append("path").datum(data).attr("d", line).attr("fill", "none")
+    .attr("stroke", "var(--series-1)").attr("stroke-width", 2).attr("stroke-linejoin", "round").attr("stroke-linecap", "round").attr("opacity", 0.7);
+  const L = path.node().getTotalLength();
+
+  // Small arrowheads at each segment's midpoint show the direction of time.
+  const arrows = svg.append("g").selectAll("path").data(d3.pairs(data)).join("path")
+    .attr("d", "M-4,-3.5L3,0L-4,3.5Z").attr("fill", "var(--series-1)")
+    .attr("transform", ([a, b]) => {
+      const ang = Math.atan2(y(b.inflacio) - y(a.inflacio), x(b.atur) - x(a.atur)) * 180 / Math.PI;
+      return `translate(${(x(a.atur) + x(b.atur)) / 2},${(y(a.inflacio) + y(b.inflacio)) / 2}) rotate(${ang})`;
+    });
+
+  const dots = svg.append("g").selectAll("circle").data(data).join("circle")
+    .attr("cx", d => x(d.atur)).attr("cy", d => y(d.inflacio)).attr("r", 5)
+    .attr("fill", d => shade(d.any)).attr("stroke", "var(--surface)").attr("stroke-width", 2);
+
+  const lab = svg.append("g").selectAll("text").data(data.filter(d => labels[d.any])).join("text")
+    .attr("class", d => d.any === 2025 || d.any === 1991 ? "annot-strong" : "annot")
+    .attr("x", d => x(d.atur) + labels[d.any][1]).attr("y", d => y(d.inflacio) + labels[d.any][2])
+    .attr("text-anchor", d => labels[d.any][3] || "start").text(d => labels[d.any][0]);
+
+  // Hover: generous invisible hit targets on every year.
+  svg.append("g").selectAll("circle").data(data).join("circle")
+    .attr("cx", d => x(d.atur)).attr("cy", d => y(d.inflacio)).attr("r", 12).attr("fill", "transparent")
+    .on("pointermove", (e, d) => {
+      const [px, py] = d3.pointer(e, document.getElementById("chart"));
+      dots.attr("r", c => c === d ? 7 : 5);
+      tip.style("opacity", 1).style("left", px + 14 + "px").style("top", py - 44 + "px")
+        .html(`<b>${d.any}</b><br>Atur: ${num(d.atur)} %<br>Inflació: ${num(d.inflacio)} %`);
+    })
+    .on("pointerleave", () => { dots.attr("r", 5); tip.style("opacity", 0); });
+
+  document.getElementById("play").addEventListener("click", () => {
+    const T = 7000, n = data.length;
+    path.attr("stroke-dasharray", `${L} ${L}`).attr("stroke-dashoffset", L)
+      .transition().duration(T).ease(d3.easeLinear).attr("stroke-dashoffset", 0)
+      .on("end", () => path.attr("stroke-dasharray", null));
+    arrows.attr("opacity", 0).transition().delay((d, i) => (i + 0.5) / (n - 1) * T).duration(150).attr("opacity", 1);
+    dots.attr("opacity", 0).transition().delay((d, i) => i / (n - 1) * T).duration(150).attr("opacity", 1);
+    lab.attr("opacity", 0).transition().delay(d => data.indexOf(d) / (n - 1) * T).duration(300).attr("opacity", 1);
+  });
+
+  d3.select("#table tbody").selectAll("tr").data(data).join("tr")
+    .html(d => `<td>${d.any}</td><td>${num(d.atur)}</td><td>${num(d.inflacio)}</td>`);
+});
+</script>
+</body>
+</html>

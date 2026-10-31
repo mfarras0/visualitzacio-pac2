@@ -1,0 +1,174 @@
+{
+ "data": "2026-10-31",
+ "capacitat_total_hm3": 678.1,
+ "volum_hm3": 531.5,
+ "pct": 78.4,
+ "mateix_dia_historic": [
+  [
+   "2000-10-31",
+   32.3
+  ],
+  [
+   "2001-10-31",
+   39.2
+  ],
+  [
+   "2002-10-31",
+   66.1
+  ],
+  [
+   "2003-10-31",
+   76.6
+  ],
+  [
+   "2004-10-31",
+   70.5
+  ],
+  [
+   "2005-10-31",
+   40.8
+  ],
+  [
+   "2006-10-31",
+   60.9
+  ],
+  [
+   "2007-10-31",
+   33.3
+  ],
+  [
+   "2008-10-31",
+   56.9
+  ],
+  [
+   "2009-10-31",
+   71.6
+  ],
+  [
+   "2010-10-31",
+   92.6
+  ],
+  [
+   "2011-10-31",
+   77.1
+  ],
+  [
+   "2012-10-31",
+   58.6
+  ],
+  [
+   "2013-10-31",
+   83.4
+  ],
+  [
+   "2014-10-31",
+   85.9
+  ],
+  [
+   "2015-10-31",
+   68.9
+  ],
+  [
+   "2016-10-31",
+   54.8
+  ],
+  [
+   "2017-10-31",
+   53.4
+  ],
+  [
+   "2018-10-31",
+   89.6
+  ],
+  [
+   "2019-10-31",
+   60.0
+  ],
+  [
+   "2020-10-31",
+   85.3
+  ],
+  [
+   "2021-10-31",
+   67.0
+  ],
+  [
+   "2022-10-31",
+   36.2
+  ],
+  [
+   "2023-10-31",
+   19.8
+  ],
+  [
+   "2024-10-31",
+   31.4
+  ],
+  [
+   "2025-10-31",
+   73.2
+  ],
+  [
+   "2026-10-31",
+   78.4
+  ]
+ ],
+ "min_historic": 14.7,
+ "max_historic": 100.9,
+ "embassaments": [
+  {
+   "nom": "Embassament de Susqueda (Osor)",
+   "volum": 190.24,
+   "pct": 85.1,
+   "capacitat": 223.55
+  },
+  {
+   "nom": "Embassament de Sau (Vilanova de Sau)",
+   "volum": 120.39,
+   "pct": 72.6,
+   "capacitat": 165.83
+  },
+  {
+   "nom": "Embassament de la Baells (Cercs)",
+   "volum": 89.07,
+   "pct": 81.9,
+   "capacitat": 108.75
+  },
+  {
+   "nom": "Embassament de la Llosa del Cavall (Navès)",
+   "volum": 59.67,
+   "pct": 83.4,
+   "capacitat": 71.55
+  },
+  {
+   "nom": "Embassament de Darnius Boadella (Darnius)",
+   "volum": 38.48,
+   "pct": 60.8,
+   "capacitat": 63.29
+  },
+  {
+   "nom": "Embassament de Sant Ponç (Clariana de Cardener)",
+   "volum": 21.84,
+   "pct": 89.5,
+   "capacitat": 24.4
+  },
+  {
+   "nom": "Embassament de Siurana (Cornudella de Montsant)",
+   "volum": 8.54,
+   "pct": 71.1,
+   "capacitat": 12.01
+  },
+  {
+   "nom": "Embassament de Riudecanyes",
+   "volum": 1.46,
+   "pct": 27.4,
+   "capacitat": 5.33
+  },
+  {
+   "nom": "Embassament de Foix (Castellet i la Gornal)",
+   "volum": 1.82,
+   "pct": 54.1,
+   "capacitat": 3.36
+  }
+ ]
+}

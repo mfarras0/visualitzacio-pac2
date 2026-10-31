@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAC2 Visualització</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  header { margin: 24px 0 32px; }
+  .author { color: var(--text-secondary); margin: 0; font-size: 18px; }
+  .card { display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--grid); transition: transform 120ms, border-color 120ms; }
+  .card:hover { outline: none; border-color: var(--series-1); transform: translateY(-2px); }
+  .card svg { width: 100%; height: 88px; }
+  .card .go { margin-top: auto; font-size: 14px; color: var(--series-1); font-weight: 600; }
+  .tag { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>PAC2 · Visualització de dades</h1>
+    <p class="author">Miquel Farràs Busquets</p>
+  </header>
+  <div class="cards">
+    <a class="card" href="histograma.html">
+      <svg viewBox="0 0 160 88" aria-hidden="true" fill="var(--series-1)">
+        <rect x="8" y="70" width="14" height="14" rx="2"/><rect x="24" y="52" width="14" height="32" rx="2"/>
+        <rect x="40" y="22" width="14" height="62" rx="2"/><rect x="56" y="8" width="14" height="76" rx="2"/>
+        <rect x="72" y="18" width="14" height="66" rx="2"/><rect x="88" y="46" width="14" height="38" rx="2"/>
+        <rect x="104" y="62" width="14" height="22" rx="2"/><rect x="120" y="72" width="14" height="12" rx="2"/>
+        <rect x="136" y="76" width="14" height="8" rx="2"/>
+      </svg>
+      <span class="tag">Grup I</span>
+      <h2>Histograma</h2>
+      <p>Renda per persona a les seccions censals de Barcelona (2023).</p>
+      <span class="go">Veure visualització →</span>
+    </a>
+    <a class="card" href="gauge.html">
+      <svg viewBox="0 0 160 88" aria-hidden="true" fill="none" stroke-width="16">
+        <path d="M30 80 A50 50 0 0 1 130 80" stroke="var(--grid)"/>
+        <path d="M30 80 A50 50 0 0 1 115.4 44.6" stroke="var(--series-1)"/>
+      </svg>
+      <span class="tag">Grup II</span>
+      <h2>Gauge</h2>
+      <p>Reserves actuals dels embassaments de les conques internes de Catalunya.</p>
+      <span class="go">Veure visualització →</span>
+    </a>
+    <a class="card" href="connected-scatterplot.html">
+      <svg viewBox="0 0 160 88" aria-hidden="true">
+        <polyline points="20,40 40,30 70,50 110,48 140,70 120,78 90,60 60,72 40,14 30,56" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round"/>
+        <g fill="var(--series-1)" stroke="var(--surface)" stroke-width="2">
+          <circle cx="20" cy="40" r="4"/><circle cx="40" cy="30" r="4"/><circle cx="70" cy="50" r="4"/><circle cx="110" cy="48" r="4"/><circle cx="140" cy="70" r="4"/>
+          <circle cx="120" cy="78" r="4"/><circle cx="90" cy="60" r="4"/><circle cx="60" cy="72" r="4"/><circle cx="40" cy="14" r="4"/><circle cx="30" cy="56" r="4"/>
+        </g>
+      </svg>
+      <span class="tag">Grup III</span>
+      <h2>Connected scatterplot</h2>
+      <p>Atur i inflació a Espanya, any a any (1991–2025).</p>
+      <span class="go">Veure visualització →</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gauge embassaments Catalunya</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+  .small { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 16px; margin-top: 8px; }
+  .small figure { margin: 0; text-align: center; }
+  .small figcaption { font-size: 13px; color: var(--text-secondary); line-height: 1.3; }
+  h2 { font-size: 18px; margin: 32px 0 4px; }
+  #main { max-width: 560px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<main>
+  <nav><a href="index.html">Inici</a><a href="histograma.html">Histograma</a><a href="gauge.html" aria-current="page">Gauge</a><a href="connected-scatterplot.html">Connected scatterplot</a></nav>
+  <h1 id="title">Els embassaments de les conques internes de Catalunya</h1>
+  <p class="subtitle" id="sub"></p>
+  <div class="chart" id="main"><div class="tooltip" id="tip"></div></div>
+  <div class="kpi" id="kpi"></div>
+
+  <h2>Embassament per embassament</h2>
+  <p class="subtitle">Percentatge de volum embassat de cadascun dels 9 embassaments, ordenats per capacitat.</p>
+  <div class="small" id="small"></div>
+
+  <p class="source"><b>Objectiu:</b> respondre d'un cop d'ull «com estem d'aigua avui?», posant el valor actual en context amb la mitjana històrica i l'any anterior. <b>Audiència:</b> públic general i gestors que consulten un tauler de seguiment de la sequera.</p>
+  <p class="source">Font: <a href="https://analisi.transparenciacatalunya.cat/Medi-Ambient/Quantitat-d-aigua-als-embassaments-de-les-Conques-/gn9e-3qhr">Agència Catalana de l'Aigua · Quantitat d'aigua als embassaments de les conques internes de Catalunya</a> (dades diàries des del 2000). La capacitat total s'ha calculat com a volum ÷ percentatge. Visualització: D3.js.</p>
+  <details>
+    <summary>Veure les dades en taula (mateix dia de cada any)</summary>
+    <div class="table-wrap"><table id="table"><thead><tr><th>Data</th><th>% capacitat</th></tr></thead><tbody></tbody></table></div>
+  </details>
+</main>
+<script>
+const pct = v => v.toFixed(1).replace(".", ",") + " %";
+const dateCa = s => new Date(s).toLocaleDateString("ca-ES", { day: "numeric", month: "long", year: "numeric" });
+const A0 = -Math.PI / 2, A1 = Math.PI / 2;
+const angle = d3.scaleLinear().domain([0, 100]).range([A0, A1]).clamp(true);
+
+function gauge(el, { value, size, marks = [], thick, big }) {
+  const w = size, h = size / 2 + (big ? 40 : 18), R = size / 2 - (big ? 24 : 6);
+  const svg = d3.select(el).append("svg").attr("viewBox", [-w / 2, -R - (big ? 16 : 6), w, h + 10]);
+  const arc = d3.arc().innerRadius(R - thick).outerRadius(R);
+  svg.append("path").attr("d", arc({ startAngle: A0, endAngle: A1 })).attr("fill", "var(--grid)");
+  svg.append("path").attr("d", arc({ startAngle: A0, endAngle: angle(value) })).attr("fill", "var(--series-1)");
+  if (big) {
+    // scale ticks
+    [0, 25, 50, 75, 100].forEach(t => {
+      const a = angle(t) - Math.PI / 2;
+      svg.append("text").attr("class", "annot").attr("text-anchor", "middle")
+        .attr("x", Math.cos(a) * (R + 14)).attr("y", Math.sin(a) * (R + 14) + 4).text(t + "%");
+    });
+  }
+  // reference marks (thin radial lines across the band)
+  marks.forEach(mk => {
+    const a = angle(mk.v) - Math.PI / 2;
+    const g = svg.append("g");
+    g.append("line").attr("x1", Math.cos(a) * (R - thick - 6)).attr("y1", Math.sin(a) * (R - thick - 6))
+      .attr("x2", Math.cos(a) * (R + 4)).attr("y2", Math.sin(a) * (R + 4))
+      .attr("stroke", "var(--text-primary)").attr("stroke-width", 2).attr("stroke-linecap", "round")
+      .attr("stroke-dasharray", mk.dash ? "3 3" : null);
+    if (mk.label) {
+      const lr = R - thick - 18;
+      g.append("text").attr("class", "annot").attr("text-anchor", Math.cos(a) < 0 ? "start" : "end")
+        .attr("x", Math.cos(a) * lr).attr("y", Math.sin(a) * lr + 4).text(mk.label);
+    }
+    if (mk.tip) {
+      g.append("line").attr("x1", 0).attr("y1", 0).attr("x2", Math.cos(a) * (R + 4)).attr("y2", Math.sin(a) * (R + 4))
+        .attr("stroke", "transparent").attr("stroke-width", 16)
+        .on("pointermove", e => {
+          const [px, py] = d3.pointer(e, el);
+          d3.select("#tip").style("opacity", 1).style("left", px + 12 + "px").style("top", py - 30 + "px").html(mk.tip);
+        })
+        .on("pointerleave", () => d3.select("#tip").style("opacity", 0));
+    }
+  });
+  svg.append("text").attr("text-anchor", "middle").attr("y", big ? -8 : -2)
+    .attr("fill", "var(--text-primary)").attr("font-weight", 600).attr("font-size", big ? 52 : 22).text(pct(value));
+  return svg;
+}
+
+d3.json("data/embassaments.json").then(d => {
+  const year = d.data.slice(0, 4);
+  const prev = d.mateix_dia_historic.filter(([day]) => day.slice(0, 4) !== year);
+  const avg = d3.mean(prev, p => p[1]);
+  const lastYear = prev[prev.length - 1];
+  const minP = d3.least(prev, p => p[1]);
+
+  document.getElementById("title").textContent =
+    `Els embassaments catalans estan al ${pct(d.pct)}, per sobre de la mitjana històrica d'aquest dia`;
+  document.getElementById("sub").textContent =
+    `Volum embassat a les conques internes de Catalunya el ${dateCa(d.data)} sobre la capacitat total (${d.capacitat_total_hm3.toLocaleString("ca-ES")} hm³). Les marques indiquen la mitjana del mateix dia entre 2000 i ${+year - 1} i el valor de fa un any.`;
+
+  gauge(document.getElementById("main"), {
+    value: d.pct, size: 520, thick: 44, big: true,
+    marks: [
+      { v: avg, label: `Mitjana ${pct(avg)}`, tip: `<b>Mitjana ${prev[0][0].slice(0, 4)}–${+year - 1}</b><br>${pct(avg)} el mateix dia` },
+      { v: lastYear[1], dash: true, label: `Fa un any ${pct(lastYear[1])}`, tip: `<b>${dateCa(lastYear[0])}</b><br>${pct(lastYear[1])}` },
+    ],
+  });
+
+  document.getElementById("kpi").innerHTML = `
+    <div>Volum actual<strong>${d.volum_hm3.toLocaleString("ca-ES")} hm³</strong></div>
+    <div>Diferència amb la mitjana (punts percentuals)<strong>${(d.pct - avg >= 0 ? "+" : "−") + Math.abs(d.pct - avg).toFixed(1).replace(".", ",")} p.p.</strong></div>
+    <div>Mínim d'aquest dia<strong>${pct(minP[1])} (${minP[0].slice(0, 4)})</strong></div>`;
+
+  const short = n => n.replace(/^Embassament de (la |l')?/, "").replace(/\s*\(.*\)/, "");
+  d.embassaments.forEach(e => {
+    const fig = d3.select("#small").append("figure");
+    gauge(fig.node(), { value: e.pct, size: 150, thick: 14 });
+    fig.append("figcaption").html(`${short(e.nom)}<br>${e.volum.toLocaleString("ca-ES")} de ${e.capacitat.toLocaleString("ca-ES")} hm³`);
+  });
+
+  d3.select("#table tbody").selectAll("tr").data(d.mateix_dia_historic.slice().reverse()).join("tr")
+    .html(([day, v]) => `<td>${dateCa(day)}</td><td>${pct(v)}</td>`);
+});
+</script>
+</body>
+</html>

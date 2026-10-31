@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Histograma renda Barcelona</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+</head>
+<body>
+<main>
+  <nav><a href="index.html">Inici</a><a href="histograma.html" aria-current="page">Histograma</a><a href="gauge.html">Gauge</a><a href="connected-scatterplot.html">Connected scatterplot</a></nav>
+  <h1>La majoria de zones de Barcelona té una renda d'entre 20.000 i 30.000 € per persona, però les més riques arriben als 54.000 €</h1>
+  <p class="subtitle">Distribució de la renda disponible de les llars per persona a les 1.068 seccions censals de Barcelona, 2023. Cada barra compta quantes seccions censals (zones d'entre 1.000 i 2.500 habitants) tenen una renda mitjana dins de cada interval. Compta zones, no persones.</p>
+  <div class="controls">
+    <label for="bin">Amplada de l'interval:</label>
+    <input id="bin" type="range" min="500" max="5000" step="500" value="2000">
+    <output id="binOut">2.000 €</output>
+  </div>
+  <div class="chart" id="chart"><div class="tooltip" id="tip"></div></div>
+  <p class="source"><b>Objectiu:</b> mostrar la forma de la desigualtat de renda dins de Barcelona: on es concentra la majoria de seccions i com de llarga és la cua de rendes altes (asimetria positiva, mitjana &gt; mediana). <b>Audiència:</b> ciutadania i periodistes locals interessats en la desigualtat urbana.</p>
+  <p class="source">Font: <a href="https://opendata-ajuntament.barcelona.cat/data/ca/dataset/renda-disponible-llars-bcn">Open Data BCN · Renda disponible de les llars per persona (2023)</a>. Visualització: D3.js.</p>
+  <details>
+    <summary>Veure les dades en taula</summary>
+    <div class="table-wrap"><table id="table"><thead><tr><th>Interval (€)</th><th>Seccions censals</th></tr></thead><tbody></tbody></table></div>
+  </details>
+</main>
+<script>
+const fmt = d3.formatLocale({ decimal: ",", thousands: ".", grouping: [3], currency: ["", " €"] });
+const eur = fmt.format(",.0f");
+const W = 880, H = 440, m = { top: 32, right: 16, bottom: 48, left: 48 };
+const svg = d3.select("#chart").append("svg").attr("viewBox", [0, 0, W, H]);
+const tip = d3.select("#tip");
+const gGrid = svg.append("g").attr("class", "grid");
+const gBars = svg.append("g");
+const gAnnot = svg.append("g");
+const gx = svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`);
+const gy = svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`);
+svg.append("text").attr("class", "axis-label").attr("x", W - m.right).attr("y", H - 8).attr("text-anchor", "end").text("Renda disponible per persona (€/any)");
+svg.append("text").attr("class", "axis-label").attr("x", m.left).attr("y", 14).text("Nombre de seccions censals");
+
+d3.json("data/renda_bcn_2023.json").then(data => {
+  const values = data.map(d => d.renda);
+  const mean = d3.mean(values), median = d3.median(values);
+  const x = d3.scaleLinear().domain([10000, 56000]).range([m.left, W - m.right]);
+  gx.call(d3.axisBottom(x).ticks(9).tickFormat(d => eur(d / 1000) + "k").tickSizeOuter(0));
+
+  function draw(width) {
+    const bins = d3.bin().domain(x.domain()).thresholds(d3.range(10000, 56000 + 1, width))(values);
+    const y = d3.scaleLinear().domain([0, d3.max(bins, b => b.length)]).nice().range([H - m.bottom, m.top]);
+    gy.call(d3.axisLeft(y).ticks(6).tickSize(0)).call(g => g.select(".domain").remove());
+    gGrid.attr("transform", `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.left - m.right)).tickFormat(""));
+
+    const r = 4;
+    const path = b => {
+      const x0 = x(b.x0) + 1, x1 = x(b.x1) - 1, y0 = H - m.bottom, y1 = y(b.length);
+      if (!b.length) return "";
+      const rr = Math.min(r, (x1 - x0) / 2, y0 - y1);
+      return `M${x0},${y0}V${y1 + rr}Q${x0},${y1} ${x0 + rr},${y1}H${x1 - rr}Q${x1},${y1} ${x1},${y1 + rr}V${y0}Z`;
+    };
+    gBars.selectAll("path").data(bins).join("path")
+      .attr("fill", "var(--series-1)")
+      .attr("d", path)
+      .on("pointermove", (e, b) => {
+        const [px, py] = d3.pointer(e, document.getElementById("chart"));
+        tip.style("opacity", 1).style("left", (px + 12) + "px").style("top", (py - 40) + "px")
+          .html(`<b>${eur(b.x0)}–${eur(b.x1)} €</b><br>${b.length} seccions (${(b.length / values.length * 100).toFixed(1).replace(".", ",")} %)`);
+      })
+      .on("pointerleave", () => tip.style("opacity", 0));
+
+    // mean / median reference lines
+    const refs = [{ v: median, label: `Mediana ${eur(median)} €`, dy: 0 }, { v: mean, label: `Mitjana ${eur(mean)} €`, dy: 16 }];
+    gAnnot.selectAll("g").data(refs).join(enter => {
+      const g = enter.append("g");
+      g.append("line"); g.append("text");
+      return g;
+    }).each(function (d) {
+      const g = d3.select(this);
+      g.select("line").attr("x1", x(d.v)).attr("x2", x(d.v)).attr("y1", m.top).attr("y2", H - m.bottom)
+        .attr("stroke", "var(--text-primary)").attr("stroke-width", 1).attr("stroke-dasharray", d.dy ? "3 3" : null);
+      g.select("text").attr("class", "annot").attr("x", x(d.v) + 6).attr("y", m.top + 10 + d.dy).text(d.label);
+    });
+
+    d3.select("#table tbody").selectAll("tr").data(bins).join("tr")
+      .html(b => `<td>${eur(b.x0)}–${eur(b.x1)}</td><td>${b.length}</td>`);
+  }
+
+  const input = document.getElementById("bin");
+  const out = document.getElementById("binOut");
+  input.addEventListener("input", () => { out.textContent = eur(+input.value) + " €"; draw(+input.value); });
+  draw(+input.value);
+});
+</script>
+</body>
+</html>
